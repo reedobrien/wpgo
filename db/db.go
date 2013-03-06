@@ -2,14 +2,20 @@ package db
 
 import (
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 type Connection struct {
-	Session *mgo.Session
-	Db      *mgo.Database
-	Url     string
-	Host    string
-	Port    int
+	Session *mgo.Session  "session"
+	Db      *mgo.Database "db"
+	Url     string        "url"
+	Host    string        "host"
+	Port    int           "port"
+}
+
+type Url struct {
+	Id  bson.ObjectId "_id"
+	Url string        "url"
 }
 
 var current = new(Connection)
@@ -24,6 +30,11 @@ func UrlCollection() *mgo.Collection {
 
 func ResourceCollection() *mgo.Collection {
 	return current.Db.C("resources")
+}
+
+func AllUrls() *mgo.Iter {
+	c := UrlCollection()
+	return c.Find(bson.M{}).Iter()
 }
 
 func Dial() error {
