@@ -29,6 +29,7 @@ func Head(target string) UrlInfo {
 		panic(err)
 	}
 	req, err := http.NewRequest("HEAD", target, nil)
+	req.Close = true
 	if err != nil {
 		panic(err)
 	}

@@ -14,7 +14,7 @@ func main() {
 	// target = "http://www.nasa.gov/worldbook/index.html"
 	/// get the collection connection
 	var wg sync.WaitGroup
-	concurrency := 10
+	concurrency := 1000
 	jobs := make(chan fetcher.UrlInfo, concurrency)
 	err := db.Dial()
 	if err != nil {
@@ -41,5 +41,4 @@ func main() {
 	}
 	wg.Wait()
 	log.Println("Finished")
-
 }
