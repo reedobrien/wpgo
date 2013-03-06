@@ -26,7 +26,7 @@ func main() {
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			for job := range jobs {
-				log.Printf("Processed: %s %s\n", result.Url, ui.Status)
+				log.Printf("Processed: %s %s\n", job.Path, job.Status)
 				err = resources.Insert(&job)
 				if err != nil {
 					log.Panic(err)
