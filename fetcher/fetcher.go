@@ -1,8 +1,9 @@
 package fetcher
 
 import (
-	//	"log"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -24,7 +25,7 @@ type UrlInfo struct {
 	Status_Code    int
 }
 
-func Head(target string) UrlInfo {
+func Head(target string) (UrlInfo, *http.Response) {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -77,10 +78,10 @@ func Head(target string) UrlInfo {
 	if resp.StatusCode == 302 {
 		ui.Location = resp.Header.Get("Location")
 	}
-	return ui
+	return ui, resp
 }
 
-func Get(target string) UrlInfo {
+func Get(target string) (UrlInfo, *http.Response) {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -95,6 +96,12 @@ func Get(target string) UrlInfo {
 		fmt.Printf("%v\n", err)
 	}
 	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Failed to do something %v\n", err)
+	}
+	log.Printf("Uhhh %v\n XXXXX", body)
 
 	if resp.Header.Get("Last-Modified") != "" {
 		lastModified, err = time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
@@ -129,5 +136,5 @@ func Get(target string) UrlInfo {
 	if resp.StatusCode == 302 {
 		ui.Location = resp.Header.Get("Location")
 	}
-	return ui
+	return ui, resp
 }

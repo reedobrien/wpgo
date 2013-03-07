@@ -3,6 +3,8 @@ package db
 import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
+	"log"
+	"wp/fetcher"
 )
 
 type Connection struct {
@@ -35,6 +37,21 @@ func ResourceCollection() *mgo.Collection {
 func AllUrls() *mgo.Iter {
 	c := UrlCollection()
 	return c.Find(bson.M{}).Iter()
+}
+
+func Seen(url string) bool {
+	c := ResourceCollection()
+	result := fetcher.UrlInfo{}
+	err := c.Find(bson.M{"url": url}).One(&result)
+	if err == mgo.ErrNotFound {
+		//log.Printf("err: %v", err)
+		return false
+	} else {
+		log.Printf("Problem fetching: %v", err)
+	}
+	//log.Printf("result: %v", result)
+	return true
+
 }
 
 func Dial() error {
