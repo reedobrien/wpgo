@@ -8,14 +8,14 @@ import (
 type Connection struct {
 	Session *mgo.Session  "session"
 	Db      *mgo.Database "db"
-	Url     string        "url"
-	Host    string        "host"
+	Url     []byte        "url"
+	Host    []byte        "host"
 	Port    int           "port"
 }
 
 type Url struct {
 	Id  bson.ObjectId "_id"
-	Url string        "url"
+	Url []byte        "url"
 }
 
 var current = new(Connection)

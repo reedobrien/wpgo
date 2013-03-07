@@ -16,7 +16,7 @@ func main() {
 	/// get the collection connection
 	var wg sync.WaitGroup
 	concurrency := 1000
-	jobs := make(chan fetcher.UrlInfo, concurrency)
+	jobs := make(chan fetcher.UrlInfo, concurrency*3)
 	err := db.Dial()
 	if err != nil {
 		panic(err)
@@ -26,14 +26,13 @@ func main() {
 	result := db.Url{}
 	for i := 0; i < concurrency; i++ {
 		go func() {
-			for job := range jobs {
-				fmt.Printf("Processed: %s %s\n", job.Path, job.Status)
-				err = resources.Insert(&job)
-				if err != nil {
-					log.Panic(err)
-				}
-				wg.Done()
+			job := <-jobs
+			fmt.Printf("Processed: %s %s\n", job.Path, job.Status)
+			err = resources.Insert(&job)
+			if err != nil {
+				log.Panic(err)
 			}
+			wg.Done()
 		}()
 	}
 	for allurls.Next(&result) {
