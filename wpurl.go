@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"wp/db"
 	"wp/fetcher"
