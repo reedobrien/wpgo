@@ -11,10 +11,11 @@ import (
 var ui fetcher.UrlInfo
 
 func main() {
-	// target := "http://www.nasa.gov/topics/nasalife/features/worldbook.html"
-	// target = "http://www.nasa.gov/worldbook/index.html"
-	/// get the collection connection
+	log.Println("Starting")
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	var wg sync.WaitGroup
+
 	concurrency := 1000
 	jobs := make(chan fetcher.UrlInfo, concurrency*3)
 	err := db.Dial()
