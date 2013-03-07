@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	//	"log"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -26,17 +27,17 @@ type UrlInfo struct {
 func Head(target string) UrlInfo {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	req, err := http.NewRequest("HEAD", target, nil)
 	req.Close = true
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	tr := &http.Transport{}
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	// Do I need this? THere's no body in HEAD request, but maybe in
 	// the interface.
@@ -45,7 +46,7 @@ func Head(target string) UrlInfo {
 	if resp.Header.Get("Last-Modified") != "" {
 		lastModified, err = time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 		if err != nil {
-			panic(err)
+			fmt.Printf("%v\n", err)
 		}
 	} else {
 		lastModified = time.Now()
@@ -58,7 +59,7 @@ func Head(target string) UrlInfo {
 	} else {
 		l, err := strconv.Atoi(length)
 		if err != nil {
-			panic(err)
+			fmt.Printf("%v\n", err)
 		} else {
 			contentLength = int64(l)
 		}
@@ -82,23 +83,23 @@ func Head(target string) UrlInfo {
 func Get(target string) UrlInfo {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	req, err := http.NewRequest("GET", target, nil)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	tr := &http.Transport{}
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.Header.Get("Last-Modified") != "" {
 		lastModified, err = time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 		if err != nil {
-			panic(err)
+			fmt.Printf("%v\n", err)
 		}
 	} else {
 		lastModified = time.Now()
@@ -111,7 +112,7 @@ func Get(target string) UrlInfo {
 	} else {
 		l, err := strconv.Atoi(length)
 		if err != nil {
-			panic(err)
+			fmt.Printf("%v\n", err)
 		} else {
 			contentLength = int64(l)
 		}

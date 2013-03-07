@@ -13,8 +13,8 @@ var ui fetcher.UrlInfo
 
 func main() {
 	log.Println("Starting")
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	var wg sync.WaitGroup
 
 	concurrency := 1000
@@ -32,10 +32,11 @@ func main() {
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			for job := range jobs {
-				fmt.Printf("Processed: %s %s\n", job.Path, job.Status)
+				// fmt.Printf("Processed: %s %s\n", job.Path, job.Status)
 				err = resources.Insert(&job)
 				if err != nil {
-					log.Panic(err)
+					fmt.Printf("%s\n", err)
+					break
 				}
 				wg.Done()
 			}
@@ -49,7 +50,7 @@ func main() {
 		}
 	}()
 	wg.Wait()
-	log.Println(counter)
+	// log.Println(counter)
 	log.Println(uc)
 	log.Println("Finished")
 }
