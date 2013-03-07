@@ -23,7 +23,7 @@ type UrlInfo struct {
 	Status_Code    int
 }
 
-func Head(target string) UrlInfo {
+func Head(target []byte) UrlInfo {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		panic(err)
@@ -79,7 +79,7 @@ func Head(target string) UrlInfo {
 	return ui
 }
 
-func Get(target string) UrlInfo {
+func Get(target []byte) UrlInfo {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		panic(err)
