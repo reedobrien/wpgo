@@ -21,6 +21,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	urls := db.UrlCollection()
+	uc, _ := urls.Count()
 	resources := db.ResourceCollection()
 	allurls := db.AllUrls()
 	result := db.Url{}
@@ -41,5 +43,6 @@ func main() {
 		jobs <- fetcher.Head(result.Url)
 	}
 	wg.Wait()
+	log.Println(uc)
 	log.Println("Finished")
 }
