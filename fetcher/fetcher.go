@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 )
@@ -29,16 +30,19 @@ func Head(target string) (UrlInfo, []byte) {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	req, err := http.NewRequest("HEAD", target, nil)
 	req.Close = true
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	tr := &http.Transport{}
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	// Do I need this? THere's no body in HEAD request, but maybe in
 	// the interface.
@@ -48,6 +52,7 @@ func Head(target string) (UrlInfo, []byte) {
 		lastModified, err = time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 		if err != nil {
 			fmt.Printf("%v\n", err)
+			os.Exit(1)
 		}
 	} else {
 		lastModified = time.Now()
@@ -61,6 +66,7 @@ func Head(target string) (UrlInfo, []byte) {
 		l, err := strconv.Atoi(length)
 		if err != nil {
 			fmt.Printf("%v\n", err)
+			os.Exit(1)
 		} else {
 			contentLength = int64(l)
 		}
@@ -85,16 +91,19 @@ func Get(target string) (UrlInfo, []byte) {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	req, err := http.NewRequest("GET", target, nil)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	req.Close = true
 	tr := &http.Transport{}
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
@@ -102,6 +111,7 @@ func Get(target string) (UrlInfo, []byte) {
 		lastModified, err = time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 		if err != nil {
 			fmt.Printf("%v\n", err)
+			os.Exit(1)
 		}
 	} else {
 		lastModified = time.Now()
@@ -109,7 +119,8 @@ func Get(target string) (UrlInfo, []byte) {
 	contentLength = resp.ContentLength
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Failed to do something %v\n", err)
+		log.Printf("Failed to read body %v\n", err)
+		os.Exit(1)
 	}
 
 	ui := UrlInfo{
