@@ -25,7 +25,7 @@ type UrlInfo struct {
 	Status_Code    int
 }
 
-func Head(target string) (UrlInfo, *http.Response) {
+func Head(target string) (UrlInfo, []byte) {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -78,10 +78,10 @@ func Head(target string) (UrlInfo, *http.Response) {
 	if resp.StatusCode == 302 {
 		ui.Location = resp.Header.Get("Location")
 	}
-	return ui, resp
+	return ui, nil
 }
 
-func Get(target string) (UrlInfo, *http.Response) {
+func Get(target string) (UrlInfo, []byte) {
 	urlinfo, err := url.Parse(target)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -97,12 +97,6 @@ func Get(target string) (UrlInfo, *http.Response) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Failed to do something %v\n", err)
-	}
-	log.Printf("Uhhh %v\n XXXXX", body)
-
 	if resp.Header.Get("Last-Modified") != "" {
 		lastModified, err = time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 		if err != nil {
@@ -111,20 +105,14 @@ func Get(target string) (UrlInfo, *http.Response) {
 	} else {
 		lastModified = time.Now()
 	}
-	// if no length it is an empty string leave the default 0 assignment
-	// in place. Ignore the error because it is ""
-	length := resp.Header.Get("Content-Length")
-	if length == "" {
-		// 0 initialization of contentLength is fine
-	} else {
-		l, err := strconv.Atoi(length)
-		if err != nil {
-			fmt.Printf("%v\n", err)
-		} else {
-			contentLength = int64(l)
-		}
+	contentLength = resp.ContentLength
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Failed to do something %v\n", err)
 	}
+
 	ui := UrlInfo{
+		Url:            target,
 		Content_Type:   resp.Header.Get("Content-Type"),
 		Content_Length: contentLength,
 		Etag:           resp.Header.Get("ETag"),
@@ -136,5 +124,5 @@ func Get(target string) (UrlInfo, *http.Response) {
 	if resp.StatusCode == 302 {
 		ui.Location = resp.Header.Get("Location")
 	}
-	return ui, resp
+	return ui, body
 }

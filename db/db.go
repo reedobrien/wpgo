@@ -30,6 +30,10 @@ func UrlCollection() *mgo.Collection {
 	return current.Db.C("urls")
 }
 
+func ErrorCollection() *mgo.Collection {
+	return current.Db.C("errors")
+}
+
 func ResourceCollection() *mgo.Collection {
 	return current.Db.C("resources")
 }
@@ -46,12 +50,12 @@ func Seen(url string) bool {
 	if err == mgo.ErrNotFound {
 		//log.Printf("err: %v", err)
 		return false
-	} else {
-		log.Printf("Problem fetching: %v", err)
 	}
-	//log.Printf("result: %v", result)
+	if err != nil {
+		log.Fatalf("Uh oh. %s", err)
+	}
+	log.Printf("Seen it, ignoring: %v", url)
 	return true
-
 }
 
 func Dial() error {

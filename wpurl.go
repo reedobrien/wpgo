@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"launchpad.net/goamz/aws"
 	"launchpad.net/goamz/s3"
 	"log"
-	"net/http"
 	"os"
 	"runtime"
 	"sync"
@@ -17,7 +15,7 @@ import (
 
 type Job struct {
 	UrlInfo fetcher.UrlInfo
-	Resp    *http.Response
+	Body    []byte
 }
 
 func main() {
@@ -32,34 +30,38 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	errors := db.ErrorCollection()
 	urls := db.UrlCollection()
 	uc, _ := urls.Count()
 	resources := db.ResourceCollection()
 	allurls := db.AllUrls()
 	result := db.Url{}
 	s3bucket := sss.GetBucket(auth(), sss.Region, sss.BucketName)
-	log.Printf("Got bucket: %v\n", s3bucket)
+	log.Printf("Got bucket: %v\n", s3bucket.Name)
 	wg.Add(uc)
 	for i := 0; i < concurrency; i++ {
-
 		go func() {
 			for job := range jobs {
-				// fmt.Printf("Processed: %s %s\n", job.Path, job.Status)
-				err = resources.Insert(&job.UrlInfo)
-				if err != nil {
-					fmt.Printf("%s\n", err)
-					break
-				}
-				body, err := ioutil.ReadAll(job.Resp.Body)
-				if err != nil {
-					log.Printf("Failed to do something %v\n", err)
-				}
-				log.Printf("Uhhh %v\n XXXXX", body)
-				err = s3bucket.PutReader(
-					sss.BucketName, job.Resp.Body, job.Resp.ContentLength, job.UrlInfo.Content_Type, s3.PublicRead)
-				if err != nil {
-					log.Printf("Failed to put file for %s: %v\n", job.UrlInfo, err)
-					log.Printf("JOB %v\n", job.Resp.Body)
+				if job.UrlInfo.Status_Code == 200 {
+					go func() {
+						err = s3bucket.Put(
+							job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
+						if err != nil {
+							log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
+							//log.Printf("JOB %v\n", job.Body)
+							errors.Insert(&job.UrlInfo)
+						} else {
+							err = resources.Insert(&job.UrlInfo)
+							if err != nil {
+								fmt.Printf("%s\n", err)
+							}
+						}
+					}()
+				} else {
+					err = resources.Insert(&job.UrlInfo)
+					if err != nil {
+						fmt.Printf("%s\n", err)
+					}
 				}
 				wg.Done()
 			}
@@ -74,14 +76,13 @@ func main() {
 				job := Job{}
 				j, r := fetcher.Get(result.Url)
 				job.UrlInfo = j
-				job.Resp = r
+				job.Body = r
 				jobs <- job
 			}
 			wg.Done()
 		}
 	}()
 	wg.Wait()
-	// log.Println(counter)
 	log.Println(uc)
 	log.Println("Finished")
 }
