@@ -24,7 +24,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	var wg sync.WaitGroup
 
-	concurrency := 1
+	concurrency := 1000
 	jobs := make(chan Job, concurrency)
 	err := db.Dial()
 	if err != nil {
