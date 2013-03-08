@@ -79,7 +79,6 @@ func main() {
 				job.Body = r
 				jobs <- job
 			}
-			wg.Done()
 		}
 	}()
 	wg.Wait()
