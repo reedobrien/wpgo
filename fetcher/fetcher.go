@@ -90,6 +90,7 @@ func Get(target string) (UrlInfo, []byte) {
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
+	req.Close = true
 	tr := &http.Transport{}
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
