@@ -76,6 +76,8 @@ func main() {
 				job.UrlInfo = j
 				job.Body = r
 				jobs <- job
+			} else {
+				wg.Done()
 			}
 		}
 	}()
