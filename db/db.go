@@ -54,7 +54,7 @@ func Seen(url string) bool {
 	if err != nil {
 		log.Fatalf("Uh oh. %s", err)
 	}
-	log.Printf("Seen it, ignoring: %v", url)
+	// log.Printf("Seen it, ignoring: %v", url)
 	return true
 }
 
