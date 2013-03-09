@@ -47,7 +47,10 @@ func main() {
 						err = s3bucket.Put(
 							url.QueryEscape(job.UrlInfo.Path), job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
 						if err != nil {
+							log.Println("***********************************************************")
 							log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
+							log.Printf("Path: %s\nSize:%d\n", url.QueryEscape(job.UrlInfo.Path), job.UrlInfo.Content_Length)
+							log.Println("***********************************************************")
 							//log.Printf("JOB %v\n", job.Body)
 							errors.Insert(&job.UrlInfo)
 						} else {
