@@ -68,10 +68,8 @@ func main() {
 			}
 		}()
 	}
-	counter := 0
 	go func() {
 		for allurls.Next(&result) {
-			counter += 1
 			seen := db.Seen(result.Url)
 			if seen == false {
 				job := Job{}
