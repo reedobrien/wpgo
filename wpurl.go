@@ -5,6 +5,7 @@ import (
 	"launchpad.net/goamz/aws"
 	"launchpad.net/goamz/s3"
 	"log"
+	"net/url"
 	"os"
 	"runtime"
 	"sync"
@@ -45,7 +46,7 @@ func main() {
 				if job.UrlInfo.Status_Code == 200 {
 					go func() {
 						err = s3bucket.Put(
-							job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
+							url.QueryEscape(job.UrlInfo.Path), job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
 						if err != nil {
 							log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
 							//log.Printf("JOB %v\n", job.Body)
