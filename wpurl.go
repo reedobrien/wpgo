@@ -42,23 +42,21 @@ func main() {
 		go func() {
 			for job := range jobs {
 				if job.UrlInfo.Status_Code == 200 {
-					go func() {
-						err = s3bucket.Put(
-							job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
+					err = s3bucket.Put(
+						job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
+					if err != nil {
+						log.Println("***********************************************************")
+						log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
+						log.Printf("Path: %s\nSize:%d\n", job.UrlInfo.Path, job.UrlInfo.Content_Length)
+						log.Println("***********************************************************")
+						//log.Printf("JOB %v\n", job.Body)
+						errors.Insert(&job.UrlInfo)
+					} else {
+						err = resources.Insert(&job.UrlInfo)
 						if err != nil {
-							log.Println("***********************************************************")
-							log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
-							log.Printf("Path: %s\nSize:%d\n", job.UrlInfo.Path, job.UrlInfo.Content_Length)
-							log.Println("***********************************************************")
-							//log.Printf("JOB %v\n", job.Body)
-							errors.Insert(&job.UrlInfo)
-						} else {
-							err = resources.Insert(&job.UrlInfo)
-							if err != nil {
-								fmt.Printf("%s\n", err)
-							}
+							fmt.Printf("%s\n", err)
 						}
-					}()
+					}
 				} else {
 					err = resources.Insert(&job.UrlInfo)
 					if err != nil {
