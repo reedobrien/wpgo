@@ -7,11 +7,12 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"sync"
 	"wp/db"
 	"wp/fetcher"
 	"wp/sss"
 )
+
+var workers = runtime.NumCPU()
 
 type Job struct {
 	UrlInfo fetcher.UrlInfo
@@ -20,11 +21,12 @@ type Job struct {
 
 func main() {
 	log.Println("Starting")
-	concurrency := runtime.NumCPU()
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	var wg sync.WaitGroup
 
-	jobs := make(chan Job, 1000)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	jobs := make(chan Job, workers)
+	done := make(chan bool)
+
 	err := db.Dial()
 	if err != nil {
 		panic(err)
@@ -37,8 +39,21 @@ func main() {
 	result := db.Url{}
 	s3bucket := sss.GetBucket(auth(), sss.Region, sss.BucketName)
 	log.Printf("Got bucket: %v\n", s3bucket.Name)
-	wg.Add(1)
-	for i := 0; i < concurrency; i++ {
+	go func() {
+		for allurls.Next(&result) {
+			seen := db.Seen(result.Url)
+			if seen == false {
+				job := Job{}
+				j, r := fetcher.Get(result.Url)
+				job.UrlInfo = j
+				job.Body = r
+				jobs <- job
+			}
+		}
+		done <- true
+	}()
+
+	for i := 0; i < workers; i++ {
 		go func() {
 			job := <-jobs
 			if job.UrlInfo.Status_Code == 200 {
@@ -63,28 +78,10 @@ func main() {
 					fmt.Printf("%s\n", err)
 				}
 			}
-			wg.Done()
-
 		}()
 	}
-
-	go func() {
-		for allurls.Next(&result) {
-			seen := db.Seen(result.Url)
-			if seen == false {
-				job := Job{}
-				j, r := fetcher.Get(result.Url)
-				job.UrlInfo = j
-				job.Body = r
-				jobs <- job
-				wg.Add(1)
-			}
-		}
-		wg.Done()
-	}()
-
-	wg.Wait()
-	log.Println(uc, wg)
+	<-done
+	log.Println(uc)
 	log.Println("Finished")
 }
 
