@@ -20,11 +20,11 @@ type Job struct {
 
 func main() {
 	log.Println("Starting")
-	concurrency := 1
+	concurrency := runtime.NumCPU()
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	var wg sync.WaitGroup
 
-	jobs := make(chan Job, concurrency)
+	jobs := make(chan Job, 1000)
 	err := db.Dial()
 	if err != nil {
 		panic(err)
@@ -37,36 +37,37 @@ func main() {
 	result := db.Url{}
 	s3bucket := sss.GetBucket(auth(), sss.Region, sss.BucketName)
 	log.Printf("Got bucket: %v\n", s3bucket.Name)
-	wg.Add(uc)
+	wg.Add(1)
 	for i := 0; i < concurrency; i++ {
 		go func() {
-			for job := range jobs {
-				if job.UrlInfo.Status_Code == 200 {
-					err = s3bucket.Put(
-						job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
-					if err != nil {
-						log.Println("***********************************************************")
-						log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
-						log.Printf("Path: %s\nSize:%d\n", job.UrlInfo.Path, job.UrlInfo.Content_Length)
-						log.Println("***********************************************************")
-						//log.Printf("JOB %v\n", job.Body)
-						errors.Insert(&job.UrlInfo)
-					} else {
-						err = resources.Insert(&job.UrlInfo)
-						if err != nil {
-							fmt.Printf("%s\n", err)
-						}
-					}
+			job := <-jobs
+			if job.UrlInfo.Status_Code == 200 {
+				err = s3bucket.Put(
+					job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
+				if err != nil {
+					log.Println("***********************************************************")
+					log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
+					log.Printf("Path: %s\nSize:%d\n", job.UrlInfo.Path, job.UrlInfo.Content_Length)
+					log.Println("***********************************************************")
+					//log.Printf("JOB %v\n", job.Body)
+					errors.Insert(&job.UrlInfo)
 				} else {
 					err = resources.Insert(&job.UrlInfo)
 					if err != nil {
 						fmt.Printf("%s\n", err)
 					}
 				}
-				wg.Done()
+			} else {
+				err = resources.Insert(&job.UrlInfo)
+				if err != nil {
+					fmt.Printf("%s\n", err)
+				}
 			}
+			wg.Done()
+
 		}()
 	}
+
 	go func() {
 		for allurls.Next(&result) {
 			seen := db.Seen(result.Url)
@@ -76,13 +77,14 @@ func main() {
 				job.UrlInfo = j
 				job.Body = r
 				jobs <- job
-			} else {
-				wg.Done()
+				wg.Add(1)
 			}
 		}
+		wg.Done()
 	}()
+
 	wg.Wait()
-	log.Println(uc)
+	log.Println(uc, wg)
 	log.Println("Finished")
 }
 
