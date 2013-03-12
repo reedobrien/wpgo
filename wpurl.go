@@ -56,7 +56,6 @@ func main() {
 	for i := 0; i < workers; i++ {
 		go func() {
 			for job := range jobs {
-				job <- jobs
 				if job.UrlInfo.Status_Code == 200 {
 					err = s3bucket.Put(
 						job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
