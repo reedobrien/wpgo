@@ -24,7 +24,7 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	jobs := make(chan Job, workers)
+	jobs := make(chan Job, 1000)
 	done := make(chan bool)
 
 	err := db.Dial()
@@ -50,7 +50,6 @@ func main() {
 				jobs <- job
 			}
 		}
-		done <- true
 	}()
 
 	for i := 0; i < workers; i++ {
@@ -60,10 +59,7 @@ func main() {
 					err = s3bucket.Put(
 						job.UrlInfo.Path, job.Body, job.UrlInfo.Content_Type, s3.PublicRead)
 					if err != nil {
-						log.Println("***********************************************************")
 						log.Printf("Failed to put file for: %s\nError%v\n", job.UrlInfo.Url, err)
-						log.Printf("Path: %s\nSize:%d\n", job.UrlInfo.Path, job.UrlInfo.Content_Length)
-						log.Println("***********************************************************")
 						//log.Printf("JOB %v\n", job.Body)
 						errors.Insert(&job.UrlInfo)
 					} else {
@@ -80,8 +76,12 @@ func main() {
 				}
 			}
 		}()
+		done <- true
 	}
-	<-done
+	for i := 0; i < workers; i++ {
+		// block until all workers are done
+		<-done
+	}
 	log.Println(uc)
 	log.Println("Finished")
 }
