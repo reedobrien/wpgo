@@ -10,15 +10,6 @@ import (
 var BucketName = "v-nasa.gov"
 var Region = aws.USEast
 
-// func main() {
-// 	creds, err := aws.EnvAuth()
-// 	if err != nil {
-// 		log.Println("Error with aws credentials: %v", err)
-// 		os.Exit(1)
-// 	}
-// 	// bucket, err := GetBucket(creds, Region, BucketName)
-// }
-
 // Get a handle onto an s3 bucket
 func GetBucket(creds aws.Auth, region aws.Region, bucket_name string) *s3.Bucket {
 	log.Println("Setting up s3 access")
