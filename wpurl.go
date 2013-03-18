@@ -12,7 +12,7 @@ import (
 	"wp/sss"
 )
 
-var workers = runtime.NumCPU()
+var workers = 12 //runtime.NumCPU()
 
 type Job struct {
 	UrlInfo fetcher.UrlInfo
@@ -22,9 +22,9 @@ type Job struct {
 func main() {
 	log.Println("Starting")
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(12) //runtime.NumCPU())
 
-	jobs := make(chan Job, 1000)
+	jobs := make(chan Job, 12)
 	done := make(chan bool)
 
 	err := db.Dial()

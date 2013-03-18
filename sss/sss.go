@@ -7,7 +7,7 @@ import (
 	// "os"
 )
 
-var BucketName = "v-nasa.gov"
+var BucketName = "v-fetched.nasa.gov"
 var Region = aws.USEast
 
 // Get a handle onto an s3 bucket
