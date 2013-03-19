@@ -24,7 +24,7 @@ func main() {
 
 	runtime.GOMAXPROCS(12) //runtime.NumCPU())
 
-	jobs := make(chan Job, 12)
+	jobs := make(chan Job, 1)
 	done := make(chan bool)
 
 	err := db.Dial()
@@ -40,16 +40,21 @@ func main() {
 	s3bucket := sss.GetBucket(auth(), sss.Region, sss.BucketName)
 	log.Printf("Got bucket: %v\n", s3bucket.Name)
 	go func() {
+	   	counter := 1
+		processed := 1 
 		for allurls.Next(&result) {
 			seen := db.Seen(result.Url)
+			counter +=1
 			if seen == false {
 				job := Job{}
 				j, r := fetcher.Get(result.Url)
 				job.UrlInfo = j
 				job.Body = r
 				jobs <- job
+				processed += 1
 			}
 		}
+		fmt.Printf("goroutine counted: %i processed unseen: %i\n", counter, processed)
 	}()
 
 	for i := 0; i < workers; i++ {
