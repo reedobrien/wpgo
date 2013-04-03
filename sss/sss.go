@@ -4,7 +4,7 @@ import (
 	"launchpad.net/goamz/aws"
 	"launchpad.net/goamz/s3"
 	"log"
-	// "os"
+	"os"
 )
 
 var BucketName = "v-fetched.nasa.gov"
@@ -25,4 +25,23 @@ func GetBucket(creds aws.Auth, region aws.Region, bucket_name string) *s3.Bucket
 	// 	}
 	// }
 	return bucket
+}
+
+// Create the named bucket in the named region -- with the supplied creds
+// and return the bucket *object
+func CreateBucket(creds aws.Auth, region aws.Region, bucket_name string) *s3.Bucket {
+	sss := s3.New(creds, region)
+	bucket := sss.Bucket(bucket_name)
+	log.Println("Creating s3 bucket")
+	bucket.PutBucket(s3.Private)
+	return bucket
+}
+
+func Auth() aws.Auth {
+	creds, err := aws.EnvAuth()
+	if err != nil {
+		log.Println("Error with aws credentials: %v", err)
+		os.Exit(1)
+	}
+	return creds
 }
