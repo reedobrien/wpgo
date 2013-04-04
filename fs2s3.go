@@ -109,10 +109,11 @@ func uploadFile(fu FileUpload, public bool, done func()) error {
 	}
 	if err := fu.Bucket.PutReader(fu.Path, fh, fi.Size(), fu.ContentType, acl); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		// os.Exit(1)
+	} else {
+		fmt.Println("Uploaded:", fu.Path, "Size:", fi.Size(), "content-type:", fu.ContentType)
 	}
 	return err
-
 }
 
 //func (b *s3.Bucket) ifModifiedSince(path string, headers)
