@@ -19,7 +19,7 @@ import (
 	"wp/sss"
 )
 
-const concurrency = 1000
+const concurrency = 100
 
 var node string
 var bucket = flag.StringP("bucket", "b", "", "Use the named bucket")
