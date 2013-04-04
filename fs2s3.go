@@ -109,7 +109,7 @@ func uploadFile(fu FileUpload, public bool, done func()) error {
 		return err
 	}
 	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
-	if err := fu.Bucket.PutReader(fu.Path, fh, fi.Size(), fu.ContentType, acl); err != nil {
+	if err := fu.Bucket.PutReader(remotePath, fh, fi.Size(), fu.ContentType, acl); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		// os.Exit(1)
 	} else {
