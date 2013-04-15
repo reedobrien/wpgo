@@ -1,6 +1,6 @@
 === modified file 's3/s3.go'
 --- s3/s3.go	2013-02-11 17:15:59 +0000
-+++ s3/s3.go	2013-04-15 20:08:37 +0000
++++ s3/s3.go	2013-04-15 21:01:14 +0000
 @@ -67,8 +67,8 @@
  	return &Bucket{s3, name}
  }
@@ -12,14 +12,13 @@
  </CreateBucketConfiguration>`
  
  // locationConstraint returns an io.Reader specifying a LocationConstraint if
-@@ -194,6 +194,30 @@
+@@ -194,6 +194,29 @@
  	return b.S3.query(req, nil)
  }
  
 +// PutReader inserts an object into the S3 bucket by consuming data
 +// from r until EOF adding meta to the common headers
 +func (b *Bucket) PutReaderWithMeta(path string, r io.Reader, length int64, contType string, perm ACL, meta map[string][]string) error {
-+	fmt.Println("Putting w/meta:", meta)
 +	headers := map[string][]string{
 +		"Content-Length": {strconv.FormatInt(length, 10)},
 +		"Content-Type":   {contType},
