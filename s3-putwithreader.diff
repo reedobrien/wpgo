@@ -1,0 +1,46 @@
+=== modified file 's3/s3.go'
+--- s3/s3.go	2013-02-11 17:15:59 +0000
++++ s3/s3.go	2013-04-15 20:08:37 +0000
+@@ -67,8 +67,8 @@
+ 	return &Bucket{s3, name}
+ }
+ 
+-var createBucketConfiguration = `<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"> 
+-  <LocationConstraint>%s</LocationConstraint> 
++var createBucketConfiguration = `<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
++  <LocationConstraint>%s</LocationConstraint>
+ </CreateBucketConfiguration>`
+ 
+ // locationConstraint returns an io.Reader specifying a LocationConstraint if
+@@ -194,6 +194,30 @@
+ 	return b.S3.query(req, nil)
+ }
+ 
++// PutReader inserts an object into the S3 bucket by consuming data
++// from r until EOF adding meta to the common headers
++func (b *Bucket) PutReaderWithMeta(path string, r io.Reader, length int64, contType string, perm ACL, meta map[string][]string) error {
++	fmt.Println("Putting w/meta:", meta)
++	headers := map[string][]string{
++		"Content-Length": {strconv.FormatInt(length, 10)},
++		"Content-Type":   {contType},
++		"x-amz-acl":      {string(perm)},
++	}
++
++	for k, v := range meta {
++		headers["x-amz-meta-"+k] = v
++	}
++
++	req := &request{
++		method:  "PUT",
++		bucket:  b.Name,
++		path:    path,
++		headers: headers,
++		payload: r,
++	}
++	return b.S3.query(req, nil)
++}
++
+ // Del removes an object from the S3 bucket.
+ //
+ // See http://goo.gl/APeTt for details.
+

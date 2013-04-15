@@ -1,0 +1,15 @@
+=== modified file 's3/s3.go'
+--- s3/s3.go    2013-02-11 17:15:59 +0000
++++ s3/s3.go    2013-03-09 04:56:06 +0000
+@@ -433,9 +433,10 @@
+        if err != nil {
+                return fmt.Errorf("bad S3 endpoint URL %q: %v", req.baseurl, err)
+        }
++       req_signpath := (&url.URL{Path: req.signpath}).String()
+        req.headers["Host"] = []string{u.Host}
+        req.headers["Date"] = []string{time.Now().In(time.UTC).Format(time.RFC1123)}
+-       sign(s3.Auth, req.method, req.signpath, req.params, req.headers)
++       sign(s3.Auth, req.method, req_signpath, req.params, req.headers)
+        return nil
+ }
+
