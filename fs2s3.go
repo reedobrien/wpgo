@@ -110,14 +110,23 @@ func uploadFile(fu FileUpload, public bool, done func()) error {
 		return err
 	}
 	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
-	meta := map[string][]string{
-		"last-modified": {fi.ModTime().Format(time.RFC1123)},
-	}
-	if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		// os.Exit(1)
+	resp, err := fu.Bucket.Head(remotePath, nil)
+	if err != nil {
+		// TODO: this should maybe move into a shouldUpload func which would need a force flag.
+		// If force upload anyway otherwise test for modified since and decide
+		if e, ok := err.(*s3.Error); ok && e.StatusCode == 404 {
+			meta := map[string][]string{
+				"last-modified": {fi.ModTime().Format(time.RFC1123)},
+			}
+			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				// os.Exit(1)
+			} else {
+				fmt.Println("Uploaded:", remotePath, "Size:", fi.Size(), "content-type:", fu.ContentType)
+			}
+		}
 	} else {
-		fmt.Println("Uploaded:", remotePath, "Size:", fi.Size(), "content-type:", fu.ContentType)
+		fmt.Fprintln(os.Stderr, "Already uploaded:", remotePath, "at:", resp.Header["Last-Modified"])
 	}
 	return err
 }

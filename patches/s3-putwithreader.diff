@@ -1,6 +1,6 @@
 === modified file 's3/s3.go'
 --- s3/s3.go	2013-02-11 17:15:59 +0000
-+++ s3/s3.go	2013-04-15 21:01:14 +0000
++++ s3/s3.go	2013-04-19 03:08:09 +0000
 @@ -67,8 +67,8 @@
  	return &Bucket{s3, name}
  }
@@ -12,7 +12,41 @@
  </CreateBucketConfiguration>`
  
  // locationConstraint returns an io.Reader specifying a LocationConstraint if
-@@ -194,6 +194,29 @@
+@@ -168,6 +168,33 @@
+ 	panic("unreachable")
+ }
+ 
++// Head HEADs an object in the S3 bucket, returns the response with
++// no body see http://bit.ly/17K1ylI
++func (b *Bucket) Head(path string, headers map[string][]string) (*http.Response, error) {
++	req := &request{
++		method:  "HEAD",
++		bucket:  b.Name,
++		path:    path,
++		headers: headers,
++	}
++	err := b.S3.prepare(req)
++	if err != nil {
++		return nil, err
++	}
++
++	for attempt := attempts.Start(); attempt.Next(); {
++		resp, err := b.S3.run(req, nil)
++		if shouldRetry(err) && attempt.HasNext() {
++			continue
++		}
++		if err != nil {
++			return nil, err
++		}
++		return resp, err
++	}
++	panic("unreachable")
++}
++
+ // Put inserts an object into the S3 bucket.
+ //
+ // See http://goo.gl/FEBPD for details.
+@@ -194,6 +221,28 @@
  	return b.S3.query(req, nil)
  }
  
@@ -28,7 +62,6 @@
 +	for k, v := range meta {
 +		headers["x-amz-meta-"+k] = v
 +	}
-+
 +	req := &request{
 +		method:  "PUT",
 +		bucket:  b.Name,
@@ -42,4 +75,13 @@
  // Del removes an object from the S3 bucket.
  //
  // See http://goo.gl/APeTt for details.
+@@ -477,7 +526,7 @@
+ 		dump, _ := httputil.DumpResponse(hresp, true)
+ 		log.Printf("} -> %s\n", dump)
+ 	}
+-	if hresp.StatusCode != 200 && hresp.StatusCode != 204 {
++	if hresp.StatusCode != 200 && hresp.StatusCode != 204 && hresp.StatusCode != 304 {
+ 		return nil, buildError(hresp)
+ 	}
+ 	if resp != nil {
 
