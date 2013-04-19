@@ -1,6 +1,6 @@
 === modified file 's3/s3.go'
 --- s3/s3.go	2013-02-11 17:15:59 +0000
-+++ s3/s3.go	2013-04-19 03:08:09 +0000
++++ s3/s3.go	2013-04-19 03:15:37 +0000
 @@ -67,8 +67,8 @@
  	return &Bucket{s3, name}
  }
@@ -75,7 +75,19 @@
  // Del removes an object from the S3 bucket.
  //
  // See http://goo.gl/APeTt for details.
-@@ -477,7 +526,7 @@
+@@ -433,9 +482,10 @@
+ 	if err != nil {
+ 		return fmt.Errorf("bad S3 endpoint URL %q: %v", req.baseurl, err)
+ 	}
++	req_signpath := (&url.URL{Path: req.signpath}).String()
+ 	req.headers["Host"] = []string{u.Host}
+ 	req.headers["Date"] = []string{time.Now().In(time.UTC).Format(time.RFC1123)}
+-	sign(s3.Auth, req.method, req.signpath, req.params, req.headers)
++	sign(s3.Auth, req.method, req_signpath, req.params, req.headers)
+ 	return nil
+ }
+ 
+@@ -477,7 +527,7 @@
  		dump, _ := httputil.DumpResponse(hresp, true)
  		log.Printf("} -> %s\n", dump)
  	}
