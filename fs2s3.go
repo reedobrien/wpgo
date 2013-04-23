@@ -22,10 +22,14 @@ import (
 
 const concurrency = 100
 
+var meta = map[string][]string{}
 var node string
 var bucket = flag.StringP("bucket", "b", "", "Use the named bucket")
 var prefix = flag.StringP("prefix", "x", "v-", "Set a prefix on the bucketname")
 var public = flag.BoolP("public", "p", false, "Makes the uploaded files publicly visible")
+var force = flag.BoolP("force", "f", false, "Force upload regardless of existance or mtime")
+var mtime = flag.IntP("mtime", "m", 0, "Upload if newer than Last-Modified")
+var newer = flag.IntP("newer", "n", 0, "Upload if newer than x-amz-meta-last-modified")
 
 // var recursive = flag.BoolP("recursive", "r", false, "Upload everything resursively from the path")
 // verify sums?
@@ -53,8 +57,8 @@ func main() {
 	}
 	fmt.Println("Uploading to bucket named: ", bucketname)
 	fmt.Println("Publicly visible:", *public)
-	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname)
-	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, *public))
+	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname) // Should fold these into an options map/struct
+	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, *public, *force))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -63,7 +67,7 @@ func main() {
 	// fmt.Printf("filepatxh.Walk() returned %v\n", err)
 }
 
-func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGroup, public bool) func(string, os.FileInfo, error) error {
+func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGroup, public bool, force bool) func(string, os.FileInfo, error) error {
 	return func(fpath string, f os.FileInfo, err error) error {
 		node := isfile(f)
 		if node {
@@ -77,10 +81,10 @@ func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGr
 				Bucket:      bucket,
 			}
 			if runtime.NumGoroutine() > concurrency {
-				uploadFile(fu, public, nil)
+				uploadFile(fu, public, force, nil)
 			} else {
 				waiter.Add(1)
-				go uploadFile(fu, public,
+				go uploadFile(fu, public, force,
 					func() {
 						waiter.Done()
 					})
@@ -92,7 +96,7 @@ func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGr
 	}
 }
 
-func uploadFile(fu FileUpload, public bool, done func()) error {
+func uploadFile(fu FileUpload, public bool, force bool, done func()) error {
 	if done != nil {
 		defer done()
 	}
@@ -110,12 +114,22 @@ func uploadFile(fu FileUpload, public bool, done func()) error {
 		return err
 	}
 	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
+	if force {
+		if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			// os.Exit(1)
+		} else {
+			fmt.Println("Force uploaded:", remotePath, "Size:", fi.Size(), "content-type:", fu.ContentType)
+		}
+		return err
+	}
+
 	resp, err := fu.Bucket.Head(remotePath, nil)
 	if err != nil {
 		// TODO: this should maybe move into a shouldUpload func which would need a force flag.
 		// If force upload anyway otherwise test for modified since and decide
 		if e, ok := err.(*s3.Error); ok && e.StatusCode == 404 {
-			meta := map[string][]string{
+			meta = map[string][]string{
 				"last-modified": {fi.ModTime().Format(time.RFC1123)},
 			}
 			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
