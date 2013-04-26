@@ -115,6 +115,9 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done f
 		return err
 	}
 	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
+	meta = map[string][]string{
+		"last-modified": {fi.ModTime().Format(time.RFC1123)},
+	}
 	if force {
 		if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -128,9 +131,6 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done f
 
 	if err != nil {
 		if e, ok := err.(*s3.Error); ok && e.StatusCode == 404 {
-			meta = map[string][]string{
-				"last-modified": {fi.ModTime().Format(time.RFC1123)},
-			}
 			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				// os.Exit(1)
@@ -140,9 +140,6 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done f
 		}
 	} else {
 		if shouldUpdate(resp, fi, newer, newermetamtime) {
-			meta = map[string][]string{
-				"last-modified": {fi.ModTime().Format(time.RFC1123)},
-			}
 			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			} else {
