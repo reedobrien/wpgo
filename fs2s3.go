@@ -29,6 +29,7 @@ var bucket = flag.StringP("bucket", "b", "", "Use the named bucket")
 var prefix = flag.StringP("prefix", "x", "v-", "Set a prefix on the bucketname")
 var public = flag.BoolP("public", "p", false, "Makes the uploaded files publicly visible")
 var force = flag.BoolP("force", "f", false, "Force upload regardless of existance or mtime")
+var sse = flag.BoolP("sse", "e", false, "Use server side encryption")
 
 // XXX: Should this always be true? I think so.
 var newer = flag.BoolP("newer", "n", false, "Upload if file time is newer than Last-modified. Default: false")
@@ -61,7 +62,7 @@ func main() {
 	fmt.Println("Uploading to bucket named: ", bucketname)
 	fmt.Println("Publicly visible:", *public)
 	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname) // Should fold these into an options map/struct
-	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, *public, *force, *newer, *newermetamtime))
+	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, *public, *force, *newer, *newermetamtime, *sse))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -70,7 +71,7 @@ func main() {
 	// fmt.Printf("filepatxh.Walk() returned %v\n", err)
 }
 
-func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGroup, public, force, newer, newermetamtime bool) func(string, os.FileInfo, error) error {
+func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGroup, public, force, newer, newermetamtime, sse bool) func(string, os.FileInfo, error) error {
 	return func(fpath string, f os.FileInfo, err error) error {
 		node := isfile(f)
 		if node {
@@ -84,10 +85,10 @@ func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGr
 				Bucket:      bucket,
 			}
 			if runtime.NumGoroutine() > concurrency {
-				uploadFile(fu, public, force, newer, newermetamtime, nil)
+				uploadFile(fu, public, force, newer, newermetamtime, sse, nil)
 			} else {
 				waiter.Add(1)
-				go uploadFile(fu, public, force, newer, newermetamtime,
+				go uploadFile(fu, public, force, newer, newermetamtime, sse,
 					func() {
 						waiter.Done()
 					})
@@ -97,7 +98,7 @@ func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGr
 	}
 }
 
-func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done func()) error {
+func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, done func()) error {
 	if done != nil {
 		defer done()
 	}
@@ -119,7 +120,7 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done f
 		"last-modified": {fi.ModTime().Format(time.RFC1123)},
 	}
 	if force {
-		if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
+		if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, sse, meta); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			// os.Exit(1)
 		} else {
@@ -131,7 +132,7 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done f
 
 	if err != nil {
 		if e, ok := err.(*s3.Error); ok && e.StatusCode == 404 {
-			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
+			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, sse, meta); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				// os.Exit(1)
 			} else {
@@ -140,7 +141,7 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime bool, done f
 		}
 	} else {
 		if shouldUpdate(resp, fi, newer, newermetamtime) {
-			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, meta); err != nil {
+			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, sse, meta); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			} else {
 				// os.Exit(1)
