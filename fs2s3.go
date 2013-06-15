@@ -40,9 +40,6 @@ var newermetamtime = flag.BoolP("newermetamtime", "N", false, "Upload if file is
 
 // var recursive = flag.BoolP("recursive", "r", false, "Upload everything resursively from the path")
 // verify sums?
-// guess mimetypes
-// force upload even if file is older than uploaded version?
-// var encrypted = .... set  x-amz-server-side-encryption: true header
 
 type FileUpload struct {
 	ContentType string
