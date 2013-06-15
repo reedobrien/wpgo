@@ -29,7 +29,7 @@ var sseValue = []string{"AES256"}
 var meta = map[string][]string{}
 var node string
 var bucket = flag.StringP("bucket", "b", "", "Use the named bucket")
-var prefix = flag.StringP("prefix", "x", "v-", "Set a prefix on the bucketname")
+var prefix = flag.StringP("prefix", "x", "", "Set upload path prefix. i.e., '-x location/'. NB: Add a slash if you want it!")
 var public = flag.BoolP("public", "p", false, "Makes the uploaded files publicly visible")
 var force = flag.BoolP("force", "f", false, "Force upload regardless of existance or mtime")
 var sse = flag.BoolP("sse", "e", false, "Use server side encryption")
@@ -64,11 +64,13 @@ func main() {
 	waiter := &sync.WaitGroup{}
 
 	directory := flag.Arg(0)
+
 	if *bucket == "" {
-		bucketname = *prefix + directory
+		bucketname = directory
 	} else {
-		bucketname = *prefix + *bucket
+		bucketname = *bucket
 	}
+
 	fmt.Println("Uploading to bucket named: ", bucketname)
 	fmt.Println("Publicly visible:", *public)
 	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname)
@@ -134,7 +136,8 @@ func uploadFile(fu FileUpload, args args, done func()) error {
 		return err
 	}
 	options := &s3.Options{SSE: args.sse}
-	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
+	// TODO: to naive? strings.Join better?
+	remotePath := args.prefix + fu.Path[strings.Index(fu.Path, "/")+1:]
 	options.Meta = map[string][]string{
 		"last-modified": {fi.ModTime().Format(time.RFC1123)},
 	}
