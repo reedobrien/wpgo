@@ -33,6 +33,7 @@ var prefix = flag.StringP("prefix", "x", "", "Set upload path prefix. i.e., '-x 
 var public = flag.BoolP("public", "p", false, "Makes the uploaded files publicly visible")
 var force = flag.BoolP("force", "f", false, "Force upload regardless of existance or mtime")
 var sse = flag.BoolP("sse", "e", false, "Use server side encryption")
+var mimetype = flag.StringP("mimetype", "m", "binary/octet-stream", "Set a fallback/default mimetype string.")
 
 // XXX: Should this always be true? I think so.
 var newer = flag.BoolP("newer", "n", false, "Upload if file time is newer than Last-modified")
@@ -40,6 +41,7 @@ var newermetamtime = flag.BoolP("newermetamtime", "N", false, "Upload if file is
 
 // var recursive = flag.BoolP("recursive", "r", false, "Upload everything resursively from the path")
 // verify sums?
+// add a flag to use text/html as the default/fallback mime type instead of binary/octet-stream
 
 type FileUpload struct {
 	ContentType string
@@ -48,8 +50,8 @@ type FileUpload struct {
 }
 
 type args struct {
-	newer, newermetamtime, sse, force, public bool
-	bucket, prefix                            string
+	force, newer, newermetamtime, public, sse bool
+	bucket, mimetype, prefix                  string
 }
 
 func main() {
@@ -73,12 +75,13 @@ func main() {
 	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname)
 
 	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, args{
-		public:         *public,
 		force:          *force,
+		mimetype:       *mimetype,
 		newer:          *newer,
 		newermetamtime: *newermetamtime,
-		sse:            *sse,
 		prefix:         *prefix,
+		public:         *public,
+		sse:            *sse,
 	}))
 
 	if err != nil {
@@ -95,7 +98,7 @@ func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGr
 		if node {
 			contType := mime.TypeByExtension(path.Ext(fpath))
 			if contType == "" {
-				contType = "binary/octet-stream"
+				contType = args.mimetype
 			}
 			fu := FileUpload{
 				ContentType: contType,
