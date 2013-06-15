@@ -22,6 +22,9 @@ import (
 )
 
 const concurrency = 100
+const sseKey string = "server-side-encryption"
+
+var sseValue = []string{"AES256"}
 
 var meta = map[string][]string{}
 var node string
@@ -115,12 +118,13 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, d
 	if err != nil {
 		return err
 	}
+	options := &s3.Options{SSE: sse}
 	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
-	meta = map[string][]string{
+	options.Meta = map[string][]string{
 		"last-modified": {fi.ModTime().Format(time.RFC1123)},
 	}
 	if force {
-		if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, sse, meta); err != nil {
+		if err := fu.Bucket.PutReader(remotePath, fh, fi.Size(), fu.ContentType, acl, *options); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			// os.Exit(1)
 		} else {
@@ -132,7 +136,7 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, d
 
 	if err != nil {
 		if e, ok := err.(*s3.Error); ok && e.StatusCode == 404 {
-			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, sse, meta); err != nil {
+			if err := fu.Bucket.PutReader(remotePath, fh, fi.Size(), fu.ContentType, acl, *options); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 				// os.Exit(1)
 			} else {
@@ -141,7 +145,7 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, d
 		}
 	} else {
 		if shouldUpdate(resp, fi, newer, newermetamtime) {
-			if err := fu.Bucket.PutReaderWithMeta(remotePath, fh, fi.Size(), fu.ContentType, acl, sse, meta); err != nil {
+			if err := fu.Bucket.PutReader(remotePath, fh, fi.Size(), fu.ContentType, acl, *options); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			} else {
 				// os.Exit(1)
