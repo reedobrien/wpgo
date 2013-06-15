@@ -35,8 +35,8 @@ var force = flag.BoolP("force", "f", false, "Force upload regardless of existanc
 var sse = flag.BoolP("sse", "e", false, "Use server side encryption")
 
 // XXX: Should this always be true? I think so.
-var newer = flag.BoolP("newer", "n", false, "Upload if file time is newer than Last-modified. Default: false")
-var newermetamtime = flag.BoolP("newwermetamtime", "N", false, "Upload if file is newer than x-amz-meta-last-modified. Default: false")
+var newer = flag.BoolP("newer", "n", false, "Upload if file time is newer than Last-modified")
+var newermetamtime = flag.BoolP("newermetamtime", "N", false, "Upload if file is newer than x-amz-meta-last-modified")
 
 // var recursive = flag.BoolP("recursive", "r", false, "Upload everything resursively from the path")
 // verify sums?
