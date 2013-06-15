@@ -54,8 +54,10 @@ func main() {
 	flag.Parse()
 	var bucketname string
 
+	// TODO, remove channel? not using it or waiter
 	uploads := make(chan FileUpload, 1)
 	waiter := &sync.WaitGroup{}
+
 	directory := flag.Arg(0)
 	if *bucket == "" {
 		bucketname = *prefix + directory
