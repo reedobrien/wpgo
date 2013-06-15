@@ -50,6 +50,11 @@ type FileUpload struct {
 	Bucket      *s3.Bucket
 }
 
+type args struct {
+	newer, newermetamtime, sse, force, public bool
+	bucket, prefix                            string
+}
+
 func main() {
 	flag.Parse()
 	var bucketname string
@@ -66,8 +71,17 @@ func main() {
 	}
 	fmt.Println("Uploading to bucket named: ", bucketname)
 	fmt.Println("Publicly visible:", *public)
-	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname) // Should fold these into an options map/struct
-	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, *public, *force, *newer, *newermetamtime, *sse))
+	s3bucket := sss.GetBucket(sss.Auth(), sss.Region, bucketname)
+
+	err := filepath.Walk(directory, makeVisitor(uploads, s3bucket, waiter, args{
+		public:         *public,
+		force:          *force,
+		newer:          *newer,
+		newermetamtime: *newermetamtime,
+		sse:            *sse,
+		prefix:         *prefix,
+	}))
+
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -76,7 +90,7 @@ func main() {
 	// fmt.Printf("filepatxh.Walk() returned %v\n", err)
 }
 
-func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGroup, public, force, newer, newermetamtime, sse bool) func(string, os.FileInfo, error) error {
+func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGroup, args args) func(string, os.FileInfo, error) error {
 	return func(fpath string, f os.FileInfo, err error) error {
 		node := isfile(f)
 		if node {
@@ -90,25 +104,24 @@ func makeVisitor(uploads chan FileUpload, bucket *s3.Bucket, waiter *sync.WaitGr
 				Bucket:      bucket,
 			}
 			if runtime.NumGoroutine() > concurrency {
-				uploadFile(fu, public, force, newer, newermetamtime, sse, nil)
+				uploadFile(fu, args, nil)
 			} else {
 				waiter.Add(1)
-				go uploadFile(fu, public, force, newer, newermetamtime, sse,
-					func() {
-						waiter.Done()
-					})
+				go uploadFile(fu, args, func() {
+					waiter.Done()
+				})
 			}
 		}
 		return nil
 	}
 }
 
-func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, done func()) error {
+func uploadFile(fu FileUpload, args args, done func()) error {
 	if done != nil {
 		defer done()
 	}
 	acl := s3.Private
-	if public {
+	if args.public {
 		acl = s3.PublicRead
 	}
 	fh, err := os.Open(fu.Path)
@@ -120,12 +133,12 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, d
 	if err != nil {
 		return err
 	}
-	options := &s3.Options{SSE: sse}
+	options := &s3.Options{SSE: args.sse}
 	remotePath := fu.Path[strings.Index(fu.Path, "/")+1:]
 	options.Meta = map[string][]string{
 		"last-modified": {fi.ModTime().Format(time.RFC1123)},
 	}
-	if force {
+	if args.force {
 		if err := fu.Bucket.PutReader(remotePath, fh, fi.Size(), fu.ContentType, acl, *options); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			// os.Exit(1)
@@ -146,7 +159,7 @@ func uploadFile(fu FileUpload, public, force, newer, newermetamtime, sse bool, d
 			}
 		}
 	} else {
-		if shouldUpdate(resp, fi, newer, newermetamtime) {
+		if shouldUpdate(resp, fi, args.newer, args.newermetamtime) {
 			if err := fu.Bucket.PutReader(remotePath, fh, fi.Size(), fu.ContentType, acl, *options); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			} else {
